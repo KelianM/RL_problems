@@ -94,6 +94,50 @@ class Race(object):
         plt.savefig(filename)
         plt.close()
 
+
+def epsilon_greedy_policy(Q, epsilon=0.1):
+    # Q is a multi-dimensional array: (image_rows, image_cols, x_velocity, y_velocity, num_actions)
+    state_dims = Q.shape[:-1]  # Extract dimensions of the state space (without actions)
+    num_actions = Q.shape[-1]  # Last dimension corresponds to the number of actions
+    
+    # Create an epsilon-greedy policy for each state
+    policy = np.ones(Q.shape) * (epsilon / num_actions)  # Initialize uniformly with epsilon
+    
+    # Get greedy actions for each state (multi-dimensional argmax)
+    greedy_actions = np.argmax(Q, axis=-1)  # Greedy action along the action dimension
+    
+    # Assign the majority of the probability mass to the greedy action
+    it = np.nditer(greedy_actions, flags=['multi_index'])
+    while not it.finished:
+        idx = it.multi_index  # Multi-dimensional index for the state
+        policy[idx][greedy_actions[idx]] += (1.0 - epsilon)  # Adjust probability for the greedy action
+        it.iternext()
+    
+    return policy
+
+def update_epsilon_greedy_policy(policy, Q, s, epsilon=0.1):
+    """
+    Update the epsilon-greedy policy for a specific state 's' after Q(s) is updated.
+    
+    Parameters:
+    - policy: the existing epsilon-greedy policy (multi-dimensional array).
+    - Q: the action-value function (multi-dimensional array).
+    - s: the multi-dimensional index of the state to update.
+    - epsilon: the exploration parameter.
+    """
+    num_actions = Q.shape[-1]  # Assuming actions are the last dimension of Q
+
+    # Get the greedy action for the updated state 's'
+    greedy_action = np.argmax(Q[s])
+    
+    # Reset the policy probabilities for state 's'
+    policy[s] = np.ones(num_actions) * (epsilon / num_actions)
+    
+    # Assign the majority of the probability mass to the greedy action
+    policy[s][greedy_action] += (1.0 - epsilon)
+    
+    return policy
+
 def run_episode(race: Race, policy):
     race.reset()
 
@@ -122,15 +166,17 @@ def MC_control(course, num_episodes=100):
     num_actions = 9
     Q = np.ones((rows, cols, race.MAX_VELOCITY + 1, race.MAX_VELOCITY + 1, num_actions), dtype=np.float32) * -1e3
     C = np.zeros_like(Q)
-    target_policy = np.argmax(Q, axis=-1)
+    # Start with uniformly-random behavior policy and greedy target policy
     behavior_policy = np.ones_like(Q)/num_actions
+    target_policy = epsilon_greedy_policy(Q, epsilon=0)
+
     for i in range(num_episodes):
         print(f'Simulating episode {i}')
         _, states, actions, rewards = run_episode(race, behavior_policy)
-        T = len(rewards)
+        num_steps = len(rewards)
         G = 0
         W = 1
-        for t in reversed(range(T)):
+        for t in reversed(range(num_steps)):
             r = rewards[t]
             s = states[t]
             a = actions[t]
@@ -138,15 +184,17 @@ def MC_control(course, num_episodes=100):
             G += r
             C[s_a_index] += W
             Q[s_a_index] += (W/C[s_a_index]) * (G - Q[s_a_index])
-            target_policy[s] = np.argmax(Q[s])
-            if target_policy[s] != a:
+            target_policy = update_epsilon_greedy_policy(target_policy, Q, s, epsilon=0)
+            if np.argmax(target_policy[s]) != a:
                 break
             W *= 1/behavior_policy[s_a_index]
+        # Update behavior to epislon greedy for the next episode
+        behavior_policy = epsilon_greedy_policy(Q, epsilon=0.5)
 
+    # Visualise episodes with final greedy policy
     for i in range(10):
         print(f'Visualise episode {i}')
-        one_hot_target_policy = np.eye(9)[target_policy]
-        path, _, _, _ = run_episode(race, one_hot_target_policy)
+        path, _, _, _ = run_episode(race, target_policy)
         race.visualize_path(f'results/race_track_paths/path_{i}.png', path)
 
 
@@ -196,4 +244,4 @@ tiny_course = ['WWWWWW',
                'WooWWW',
                'W--WWW',]
 
-MC_control(big_course, num_episodes=1000)
+MC_control(big_course, num_episodes=100)

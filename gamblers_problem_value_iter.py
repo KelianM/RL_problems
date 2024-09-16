@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 def get_actions(capital):
     max_bet = min(capital, goal - capital)
@@ -36,7 +37,7 @@ def value_iteration():
     state_values[goal] = 1
     # compute values
     while True:
-        old_state_values = state_values
+        old_state_values = np.copy(state_values)
         for state in states[1:goal]:
             actions = get_actions(state)
             # state value is the best action action value for your current state
@@ -49,8 +50,9 @@ def value_iteration():
             break
 
     # output greedy policy
-    policy = np.zeros_like(states)
+    policy = np.zeros(len(states))
     for state in states[1:goal]:
+        actions = get_actions(state)
         action_returns = np.zeros_like(actions, dtype=float)
         for i, action in enumerate(actions):
             action_returns[i] = get_state_action_value(state, action, state_values)
@@ -58,11 +60,29 @@ def value_iteration():
 
     return state_values, policy
 
-p = 0.4
-theta = 0.0001
+p = 0.1
+theta = 1e-6
 goal = 100
 states = np.arange(goal + 1)
 rewards = np.array([0, 1])
 state_values, policy = value_iteration()
 print(state_values)
 print(policy)
+# Plot the Value Function
+plt.subplot(2, 1, 1)
+plt.plot(state_values)
+plt.title(f'Value Function for p = {p}')
+plt.xlabel('Capital')
+plt.ylabel('Value Estimates')
+plt.grid(True)
+
+# Plot the Final Policy (Stake)
+plt.subplot(2, 1, 2)
+plt.scatter(range(len(policy)), policy, marker='o', color='red')
+plt.title('Final Policy (Stake)')
+plt.xlabel('Capital')
+plt.ylabel('Stake')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()

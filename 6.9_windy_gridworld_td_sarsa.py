@@ -17,8 +17,8 @@ class GridWorld(object):
             5: np.array([-1, -1]),  # Up-Left (Diagonal)
             6: np.array([1, 1]),    # Down-Right (Diagonal)
             7: np.array([1, -1]),    # Down-Left (Diagonal)
-            # # # Stationary move (useful only with wind)
-            # 8: np.array([0, 0])    # Down-Left (Diagonal)
+            # Stationary move (useful only with wind)
+            8: np.array([0, 0])    # Down-Left (Diagonal)
         }
         self.NUM_ACTIONS = len(self.ACTION_TO_DELTA)
         
@@ -138,6 +138,35 @@ def sarsa_td(gridworld: GridWorld, num_episodes, epsilon, alpha, discount):
         paths.append(path)
     return num_actions_per_episode, paths
 
+def Q_learning(gridworld: GridWorld, num_episodes, epsilon, alpha, discount):
+    rows, cols = gridworld.GRID.shape
+    Q = np.zeros((rows, cols, gridworld.NUM_ACTIONS), dtype=np.float32)
+    num_actions_per_episode = []
+    total_actions = 0
+    paths = []
+    for episode in range(num_episodes + 1):
+        print(f"Running episode {episode + 1}")
+        gridworld.reset()
+        s = gridworld.get_state()
+        last_episode = episode == num_episodes
+        path = [s]
+        while not gridworld.goal_reached():
+            total_actions += 1
+            # Make the last episode greedy so we can see performance of target policy
+            if not last_episode:
+                a = epsilon_greedy_policy(Q, s, epsilon=epsilon)
+            else:
+                a = epsilon_greedy_policy(Q, s, epsilon=0)
+            r = gridworld.take_action(a)
+            s_next = gridworld.get_state()
+            s_a = s + (a,)
+            Q[s_a] += alpha * (r + discount * np.max(Q[s_next]) - Q[s_a])
+            s = s_next
+            path.append(s)
+        num_actions_per_episode.append(total_actions)
+        paths.append(path)
+    return num_actions_per_episode[:-1], paths
+
 def plot(filename, num_actions_per_episode):
     episodes = np.arange(len(num_actions_per_episode))
     plt.plot(num_actions_per_episode, episodes)
@@ -160,6 +189,6 @@ start = (3,  0)
 goal = (3, 7)
 
 gridworld = GridWorld(grid, start, goal)
-num_actions_per_episode, paths = sarsa_td(gridworld, num_episodes=500, epsilon=epsilon, alpha=alpha, discount=discount)
+num_actions_per_episode, paths = Q_learning(gridworld, num_episodes=500, epsilon=epsilon, alpha=alpha, discount=discount)
 plot("results/windy_gridworld/windy_gridworld_perf_king.png", num_actions_per_episode)
 gridworld.visualise_path("results/windy_gridworld/windy_gridworld_path_king.png", paths[-1]) # Visualise the final (best) path

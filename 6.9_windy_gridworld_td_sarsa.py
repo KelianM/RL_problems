@@ -8,10 +8,15 @@ class GridWorld(object):
         self.GOAL = goal
         self.position = start
         self.ACTION_TO_DELTA = {
-            0: np.array([-1, 0]),  # Up: row decreases, column stays the same
-            1: np.array([1, 0]),   # Down: row increases, column stays the same
-            2: np.array([0, 1]),   # Right: row stays the same, column increases
-            3: np.array([0, -1])   # Left: row stays the same, column decreases
+            0: np.array([-1, 0]),   # Up
+            1: np.array([1, 0]),    # Down
+            2: np.array([0, 1]),    # Right
+            3: np.array([0, -1]),   # Left
+            # For King's moves (include diagonals)
+            4: np.array([-1, 1]),   # Up-Right (Diagonal)
+            5: np.array([-1, -1]),  # Up-Left (Diagonal)
+            6: np.array([1, 1]),    # Down-Right (Diagonal)
+            7: np.array([1, -1])    # Down-Left (Diagonal)
         }
         self.NUM_ACTIONS = len(self.ACTION_TO_DELTA)
         
@@ -150,5 +155,5 @@ goal = (3, 7)
 
 gridworld = GridWorld(grid, start, goal)
 num_actions_per_episode, paths = sarsa_td(gridworld, num_episodes=170, epsilon=epsilon, alpha=alpha, discount=discount)
-plot("results/windy_gridworld/windy_gridworld_performance.png", num_actions_per_episode)
-gridworld.visualise_path("results/windy_gridworld/windy_gridworld_path.png", paths[-1]) # Visualise the final (best) path
+plot("results/windy_gridworld/windy_gridworld_performance_king.png", num_actions_per_episode)
+gridworld.visualise_path("results/windy_gridworld/windy_gridworld_path.png_king", paths[-1]) # Visualise the final (best) path

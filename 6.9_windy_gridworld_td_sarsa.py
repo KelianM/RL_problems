@@ -37,6 +37,45 @@ class GridWorld(object):
         reward = 0 if self.goal_reached() else -1
         return reward
 
+    def visualise_path(self, path):
+        grid = np.array(self.GRID)
+        fig, ax = plt.subplots()
+        
+        # Create a colormap for wind strength
+        cmap = plt.cm.Blues
+        norm = plt.Normalize(vmin=0, vmax=2)  # Wind levels from 0 to 2
+
+        # Plot the grid with wind strength
+        ax.imshow(grid, cmap=cmap, norm=norm)
+
+        # Mark the start and goal points
+        ax.text(self.START[1], self.START[0], 'S', ha='center', va='center', color='green', fontsize=12, fontweight='bold')
+        ax.text(self.GOAL[1], self.GOAL[0], 'G', ha='center', va='center', color='blue', fontsize=12, fontweight='bold')
+
+        # Extract x and y coordinates from the path
+        path_x = [pos[0] for pos in path]
+        path_y = [pos[1] for pos in path]
+        
+        # Plot arrows along the path
+        for i in range(len(path) - 1):
+            dx = path_x[i+1] - path_x[i]
+            dy = path_y[i+1] - path_y[i]
+            ax.quiver(path_y[i], path_x[i], dy, dx, angles='xy', scale_units='xy', scale=1, color='red', width=0.005)
+
+        # Set up the grid
+        ax.set_xticks(np.arange(grid.shape[1]))
+        ax.set_yticks(np.arange(grid.shape[0]))
+        ax.set_xticklabels(np.arange(grid.shape[1]))
+        ax.set_yticklabels(np.arange(grid.shape[0]))
+
+        # Add gridlines
+        ax.grid(color='black', linestyle='-', linewidth=1)
+        ax.set_xticks(np.arange(-.5, grid.shape[1], 1), minor=True)
+        ax.set_yticks(np.arange(-.5, grid.shape[0], 1), minor=True)
+        ax.grid(which="minor", color="black", linestyle='-', linewidth=0.5)
+
+        plt.show()
+        
 def epsilon_greedy_policy(Q, state, epsilon):
     """
     Implements epsilon-greedy policy for a given state (position).
@@ -66,10 +105,12 @@ def sarsa_td(gridworld: GridWorld, num_episodes, epsilon, alpha, discount):
     Q = np.zeros((rows, cols, gridworld.NUM_ACTIONS), dtype=np.float32)
     num_actions_per_episode = []
     total_actions = 0
+    paths = []
     for episode in range(num_episodes):
         print(f"Running episode {episode + 1}")
         gridworld.reset()
         s = gridworld.get_state()
+        path = [s]
         a = epsilon_greedy_policy(Q, s, epsilon=epsilon)
         while not gridworld.goal_reached():
             total_actions += 1
@@ -80,8 +121,10 @@ def sarsa_td(gridworld: GridWorld, num_episodes, epsilon, alpha, discount):
             s_a_next = s_next + (a_next,)
             Q[s_a] += alpha * (r + discount * Q[s_a_next] - Q[s_a])
             s, a = s_next, a_next
+            path.append(s)
         num_actions_per_episode.append(total_actions)
-    return num_actions_per_episode
+        paths.append(path)
+    return num_actions_per_episode, paths
 
 def plot(num_actions_per_episode):
     episodes = np.arange(len(num_actions_per_episode))
@@ -104,5 +147,6 @@ start = (3,  0)
 goal = (3, 7)
 
 gridworld = GridWorld(grid, start, goal)
-num_actions_per_episode = sarsa_td(gridworld, num_episodes=170, epsilon=epsilon, alpha=alpha, discount=discount)
+num_actions_per_episode, paths = sarsa_td(gridworld, num_episodes=170, epsilon=epsilon, alpha=alpha, discount=discount)
 plot(num_actions_per_episode)
+gridworld.visualise_path(paths[-1]) # Visualise the final (best) path

@@ -16,7 +16,9 @@ class GridWorld(object):
             4: np.array([-1, 1]),   # Up-Right (Diagonal)
             5: np.array([-1, -1]),  # Up-Left (Diagonal)
             6: np.array([1, 1]),    # Down-Right (Diagonal)
-            7: np.array([1, -1])    # Down-Left (Diagonal)
+            7: np.array([1, -1]),    # Down-Left (Diagonal)
+            # # # Stationary move (useful only with wind)
+            # 8: np.array([0, 0])    # Down-Left (Diagonal)
         }
         self.NUM_ACTIONS = len(self.ACTION_TO_DELTA)
         
@@ -31,6 +33,10 @@ class GridWorld(object):
 
     def take_action(self, action):
         wind = self.GRID[self.position]
+        # Stochastic wind (randomly change it's effect by 1 when present)
+        if wind > 0:
+            wind += np.random.randint(-1, 2)
+
         pos = np.array(self.position)
         pos[0] += wind
         pos += self.ACTION_TO_DELTA[action]
@@ -154,6 +160,6 @@ start = (3,  0)
 goal = (3, 7)
 
 gridworld = GridWorld(grid, start, goal)
-num_actions_per_episode, paths = sarsa_td(gridworld, num_episodes=170, epsilon=epsilon, alpha=alpha, discount=discount)
-plot("results/windy_gridworld/windy_gridworld_performance_king.png", num_actions_per_episode)
-gridworld.visualise_path("results/windy_gridworld/windy_gridworld_path.png_king", paths[-1]) # Visualise the final (best) path
+num_actions_per_episode, paths = sarsa_td(gridworld, num_episodes=500, epsilon=epsilon, alpha=alpha, discount=discount)
+plot("results/windy_gridworld/windy_gridworld_perf_king.png", num_actions_per_episode)
+gridworld.visualise_path("results/windy_gridworld/windy_gridworld_path_king.png", paths[-1]) # Visualise the final (best) path

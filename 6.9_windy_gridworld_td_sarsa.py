@@ -37,7 +37,7 @@ class GridWorld(object):
         reward = 0 if self.goal_reached() else -1
         return reward
 
-    def visualise_path(self, path):
+    def visualise_path(self, filename, path):
         grid = np.array(self.GRID)
         fig, ax = plt.subplots()
         
@@ -74,6 +74,7 @@ class GridWorld(object):
         ax.set_yticks(np.arange(-.5, grid.shape[0], 1), minor=True)
         ax.grid(which="minor", color="black", linestyle='-', linewidth=0.5)
 
+        plt.savefig(filename)
         plt.show()
         
 def epsilon_greedy_policy(Q, state, epsilon):
@@ -126,13 +127,14 @@ def sarsa_td(gridworld: GridWorld, num_episodes, epsilon, alpha, discount):
         paths.append(path)
     return num_actions_per_episode, paths
 
-def plot(num_actions_per_episode):
+def plot(filename, num_actions_per_episode):
     episodes = np.arange(len(num_actions_per_episode))
     plt.plot(num_actions_per_episode, episodes)
     plt.xlabel('Time Steps')
     plt.ylabel('Episodes')
     plt.title('Number of Actions per Episode (Switched Axes)')
     plt.grid(True)
+    plt.savefig(filename)
     plt.show()
 
 epsilon = 0.1
@@ -148,5 +150,5 @@ goal = (3, 7)
 
 gridworld = GridWorld(grid, start, goal)
 num_actions_per_episode, paths = sarsa_td(gridworld, num_episodes=170, epsilon=epsilon, alpha=alpha, discount=discount)
-plot(num_actions_per_episode)
-gridworld.visualise_path(paths[-1]) # Visualise the final (best) path
+plot("results/windy_gridworld/windy_gridworld_performance.png", num_actions_per_episode)
+gridworld.visualise_path("results/windy_gridworld/windy_gridworld_path.png", paths[-1]) # Visualise the final (best) path
